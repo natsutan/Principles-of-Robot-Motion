@@ -5,21 +5,67 @@ from more_itertools import windowed
 
 font = ImageFont.truetype('C:/Windows/Fonts/Consola.ttf', 30)
 
+
+
+
+
 class World():
+    DRAW_POINT_SIZE = 5
     IMAGE_SIZE = 1200
     def __init__(self):
         self.min_x = -10.0
         self.max_x = 10.0
         self.min_y = -10.0
         self.max_y = 10.0
+        self.start = None
+        self.goal = None
         self.obstacles = []
+
+    def set_start(self, pos):
+        self.start = pos
+
+    def set_goal(self, pos):
+        self.goal = pos
+
+    def add_obstacle(self, obst):
+        self.obstacles.append(obst)
+
+    def point_to_pixel(self, pos):
+        # 0～10.0の座標を、0～500のピクセルに変換して、センターをそろえる。
+        px = int(pos[0] * 50 + self.IMAGE_SIZE / 2)
+        py = self.IMAGE_SIZE - int(pos[1] * 50 + self.IMAGE_SIZE / 2)
+        return (px, py)
 
     def draw(self, filepath):
         image = Image.new('RGB', (self.IMAGE_SIZE, self.IMAGE_SIZE), color=(255, 255, 255))
         draw = ImageDraw.Draw(image)
         self.draw_axis(draw)
+        self.draw_start(draw)
+        self.draw_goal(draw)
+
+        for obst in self.obstacles:
+            obst.draw(draw)
+
 
         image.save(filepath)
+
+    def draw_start(self, draw):
+        if self.start is None:
+            return
+        start_p = self.point_to_pixel(self.start)
+        bbox = (start_p[0] - self.DRAW_POINT_SIZE, start_p[1] - self.DRAW_POINT_SIZE,
+                start_p[0] + self.DRAW_POINT_SIZE, start_p[1] + self.DRAW_POINT_SIZE)
+
+        draw.ellipse(bbox, fill=(0, 0, 255))
+
+    def draw_goal(self, draw):
+        if self.goal is None:
+            return
+        goal_p = self.point_to_pixel(self.goal)
+        bbox = (goal_p[0] - self.DRAW_POINT_SIZE, goal_p[1] - self.DRAW_POINT_SIZE,
+                goal_p[0] + self.DRAW_POINT_SIZE, goal_p[1] + self.DRAW_POINT_SIZE)
+
+        draw.ellipse(bbox, fill=(255, 0, 0))
 
     def draw_axis(self, draw):
 
@@ -52,13 +98,50 @@ class World():
         draw.text((45, 330), '5.0', 'black', font=font)
         draw.text((25, 70), '10.0', 'black', font=font)
 
+class Obstacle:
+    def __init__(self, w, h):
+        self.w = w
+        self.h = h
+        self.pos = None
+
+    def set_pos(self, pos):
+        self.pos = pos
+
+    def draw(self, draw):
+
+        lu_x = self.pos[0] - self.w / 2.0
+        lu_y = self.pos[1] - self.h / 2.0
+        rl_x = self.pos[0] + self.w / 2.0
+        rl_y = self.pos[1] + self.h / 2.0
+
+        lu_p = World().point_to_pixel((lu_x, lu_y))
+        rl_p = World().point_to_pixel((rl_x, rl_y))
+
+        bbox = (lu_p[0], lu_p[1], rl_p[0], rl_p[1])
+        draw.rectangle(bbox, fill=(116, 80, 48))
+
+
 def main():
     # robot.set_map()
     # robot.run()
     world = World()
-    world.draw('white.png')
-    #world.set_start((50, 400))
-    #world.set_goal((540, 80))
+    world.set_start((-8.0, -8.0))
+    world.set_goal((9.0, 9.0))
+
+    obst1 = Obstacle(5.0, 3.0)
+    obst1.set_pos((-3.0, -2.0))
+    world.add_obstacle(obst1)
+
+    obst2 = Obstacle(7.0, 3.0)
+    obst2.set_pos((0, -1.0))
+    world.add_obstacle(obst2)
+
+    obst2 = Obstacle(4.0, 4.0)
+    obst2.set_pos((5.0, 5.0))
+    world.add_obstacle(obst2)
+
+
+    world.draw('map1.png')
 
     #robot = Bug1Robot()
     #robot.set_world(world)
