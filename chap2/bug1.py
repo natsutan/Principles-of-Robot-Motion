@@ -36,18 +36,20 @@ class World():
         py = self.IMAGE_SIZE - int(pos[1] * 50 + self.IMAGE_SIZE / 2)
         return (px, py)
 
-    def draw(self, filepath):
+
+    def save(self, filepath):
         image = Image.new('RGB', (self.IMAGE_SIZE, self.IMAGE_SIZE), color=(255, 255, 255))
         draw = ImageDraw.Draw(image)
+        self.draw(draw)
+        image.save(filepath)
+
+    def draw(self, draw):
         self.draw_axis(draw)
         self.draw_start(draw)
         self.draw_goal(draw)
 
         for obst in self.obstacles:
             obst.draw(draw)
-
-
-        image.save(filepath)
 
     def draw_start(self, draw):
         if self.start is None:
@@ -120,10 +122,31 @@ class Obstacle:
         bbox = (lu_p[0], lu_p[1], rl_p[0], rl_p[1])
         draw.rectangle(bbox, fill=(116, 80, 48))
 
+class BugRobot:
+    def __init__(self):
+        self.pose = None
+        self.world = None
+        self.start = None
+        self.goal = None
+        self.trajectory = []
+
+    def set_world(self, world):
+        self.world = world
+
+    def set_start_goal_from_world(self):
+        self.start = self.world.start
+        self.goal = self.world.goal
+
+    def save_trajectory(self, filepath):
+        image = Image.new('RGB', (self.world.IMAGE_SIZE, self.world.IMAGE_SIZE), color=(255, 255, 255))
+        draw = ImageDraw.Draw(image)
+        self.world.draw(draw)
+
+
+        image.save(filepath)
+
 
 def main():
-    # robot.set_map()
-    # robot.run()
     world = World()
     world.set_start((-8.0, -8.0))
     world.set_goal((9.0, 9.0))
@@ -141,17 +164,13 @@ def main():
     world.add_obstacle(obst2)
 
 
-    world.draw('map1.png')
-
-    #robot = Bug1Robot()
-    #robot.set_world(world)
-    #robot.set_start_goal_from_world()
+    robot = BugRobot()
+    robot.set_world(world)
+    robot.set_start_goal_from_world()
 
 
-
-
-    #robot.save_trajectory('out/result.png')
-
+    robot.save_trajectory('out/result.png')
+    world.save("out/map.png")
 
 
     pass
