@@ -123,12 +123,17 @@ class Obstacle:
         draw.rectangle(bbox, fill=(116, 80, 48))
 
 class BugRobot:
+    DRAW_ROBO_SIZE = 6
     def __init__(self):
-        self.pose = None
+        self.pos = None
+        self.theta = None
         self.world = None
         self.start = None
         self.goal = None
         self.trajectory = []
+
+    def pose(self):
+        return (self.pos[0], self.pos[1], self.theta)
 
     def set_world(self, world):
         self.world = world
@@ -136,12 +141,26 @@ class BugRobot:
     def set_start_goal_from_world(self):
         self.start = self.world.start
         self.goal = self.world.goal
+        self.pos = (self.start[0], self.start[1])
+        self.theta = 0
+        self.trajectory = [self.pose(), ]
+
+    def move(self, pos):
+        self.pos  = pos
+        self.trajectory.append(self.pose())
 
     def save_trajectory(self, filepath):
         image = Image.new('RGB', (self.world.IMAGE_SIZE, self.world.IMAGE_SIZE), color=(255, 255, 255))
         draw = ImageDraw.Draw(image)
         self.world.draw(draw)
 
+        for p in windowed(self.trajectory, 2):
+            src_p = self.world.point_to_pixel((p[0][0], p[0][1]))
+            dst_p = self.world.point_to_pixel((p[1][0], p[1][1]))
+
+            draw.line((src_p[0], src_p[1], dst_p[0], dst_p[1]), fill = (0, 255, 0), width = 2)
+            robo_bbox = (dst_p[0] - self.DRAW_ROBO_SIZE, dst_p[1] - self.DRAW_ROBO_SIZE, dst_p[0] + self.DRAW_ROBO_SIZE, dst_p[1] + self.DRAW_ROBO_SIZE)
+            draw.ellipse(robo_bbox, outline = (0, 255, 0), width=1)
 
         image.save(filepath)
 
@@ -168,6 +187,11 @@ def main():
     robot.set_world(world)
     robot.set_start_goal_from_world()
 
+    robot.move((-2, -3))
+    robot.move((-2, 4))
+    robot.move((3, 1))
+    robot.move((6, 4))
+    robot.move((9, 9))
 
     robot.save_trajectory('out/result.png')
     world.save("out/map.png")
