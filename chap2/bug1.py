@@ -7,8 +7,6 @@ font = ImageFont.truetype('C:/Windows/Fonts/Consola.ttf', 30)
 
 
 
-
-
 class World():
     DRAW_POINT_SIZE = 5
     IMAGE_SIZE = 1200
@@ -100,6 +98,9 @@ class World():
         draw.text((45, 330), '5.0', 'black', font=font)
         draw.text((25, 70), '10.0', 'black', font=font)
 
+
+
+
 class Obstacle:
     def __init__(self, w, h):
         self.w = w
@@ -122,8 +123,21 @@ class Obstacle:
         bbox = (lu_p[0], lu_p[1], rl_p[0], rl_p[1])
         draw.rectangle(bbox, fill=(116, 80, 48))
 
+    def is_collision(self, pos):
+        if self.pos is None:
+            return False
+
+        min_x = self.pos[0] - self.w / 2
+        max_x = self.pos[0] + self.w / 2
+        min_y = self.pos[1] - self.h / 2
+        max_y = self.pos[1] + self.h / 2
+
+        return min_x < pos[0] < max_x and min_y < pos[1] < max_y
+
+
 class BugRobot:
     DRAW_ROBO_SIZE = 6
+    DEFAULT_SPEED = 1.0
     def __init__(self):
         self.pos = None
         self.theta = None
@@ -131,6 +145,7 @@ class BugRobot:
         self.start = None
         self.goal = None
         self.trajectory = []
+        self.speed = self.DEFAULT_SPEED
 
     def pose(self):
         return (self.pos[0], self.pos[1], self.theta)
@@ -145,9 +160,49 @@ class BugRobot:
         self.theta = 0
         self.trajectory = [self.pose(), ]
 
+    def collision_detection(self, next_pos):
+        for o in self.world.obstacles:
+            if o.is_collision(next_pos):
+                return True
+
+        return False
+
     def move(self, pos):
         self.pos  = pos
+
+        # 衝突判定
+        if self.collision_detection(pos):
+            print(f"Collision detected {pos}")
+
         self.trajectory.append(self.pose())
+
+    def rotation(self, theta):
+        """
+        thetaの方向を向く
+        """
+        self.theta = theta
+
+    def calc_theta_to_goal(self):
+        x, y, _ = self.pose()
+        x = self.goal[0] - x
+        y = self.goal[1] - y
+        theta = math.atan2(y, x)
+        return theta
+
+    def run(self):
+        """
+        軌道のアルゴリズム本体
+        """
+        # goalを向く
+        theta = self.calc_theta_to_goal()
+        self.rotation(theta)
+
+        for _ in range(10):
+            x, y, theta = self.pose()
+            next_x = x + math.cos(theta) * self.speed
+            next_y = y + math.sin(theta) * self.speed
+            self.move((next_x, next_y))
+
 
     def save_trajectory(self, filepath):
         image = Image.new('RGB', (self.world.IMAGE_SIZE, self.world.IMAGE_SIZE), color=(255, 255, 255))
@@ -187,11 +242,7 @@ def main():
     robot.set_world(world)
     robot.set_start_goal_from_world()
 
-    robot.move((-2, -3))
-    robot.move((-2, 4))
-    robot.move((3, 1))
-    robot.move((6, 4))
-    robot.move((9, 9))
+    robot.run()
 
     robot.save_trajectory('out/result.png')
     world.save("out/map.png")
