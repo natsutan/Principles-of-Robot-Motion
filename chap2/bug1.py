@@ -138,7 +138,14 @@ class Obstacle:
 class BugRobot:
     DRAW_ROBO_SIZE = 6
     DEFAULT_SPEED = 1.0
+    DEFAULT_ROTATION_UNIT = math.pi / 8.0
+
+    ST_IDLE = 0
+    ST_MOVE_STRAIGHT = 1
+    ST_STOP = -1
+
     def __init__(self):
+        self.state = self.ST_IDLE
         self.pos = None
         self.theta = None
         self.world = None
@@ -189,6 +196,42 @@ class BugRobot:
         theta = math.atan2(y, x)
         return theta
 
+    def calc_next_theta(self):
+        """
+        障害物をよける角度を見つける。
+        正面先を調べて場合分け
+        ・正面に進むとぶつかるとき、左側でぶつからない角度を探す
+        ・正面に進んでもぶつからないとき、右側のぶつからない角度を探す
+        """
+        _, _, theta = self.pose()
+        next_x, next_y = self.next_pos()
+        if self.collision_detection((next_x, next_y)):
+            sign = 1
+        else:
+            sign = -1
+
+        while True:
+            theta = theta + sign * self.DEFAULT_ROTATION_UNIT
+            nx, ny = self.next_pos(theta)
+            if self.collision_detection((nx, ny)):
+                continue
+            return theta
+
+    def next_pos(self, theta = None):
+        """
+        単位時間後の自分の位置を計算する。
+        thetaが指定されたときはその向きに移動した場所。
+        thetaが指定されていないときは、現在のthetaを使用する。
+        """
+        if theta is None:
+            x, y, theta = self.pose()
+        else:
+            x, y, _ = self.pose()
+
+        next_x = x + math.cos(theta) * self.speed
+        next_y = y + math.sin(theta) * self.speed
+        return (next_x, next_y)
+
     def run(self):
         """
         軌道のアルゴリズム本体
@@ -196,11 +239,14 @@ class BugRobot:
         # goalを向く
         theta = self.calc_theta_to_goal()
         self.rotation(theta)
+        self.state = self.ST_MOVE_STRAIGHT
 
-        for _ in range(10):
-            x, y, theta = self.pose()
-            next_x = x + math.cos(theta) * self.speed
-            next_y = y + math.sin(theta) * self.speed
+        while self.state != self.ST_STOP:
+            next_x, next_y = self.next_pos()
+            if self.collision_detection((next_x, next_y)):
+                self.state = self.ST_STOP
+                continue
+
             self.move((next_x, next_y))
 
 
