@@ -138,11 +138,14 @@ class Obstacle:
 class BugRobot:
     DRAW_ROBO_SIZE = 6
     DEFAULT_SPEED = 1.0
-    DEFAULT_ROTATION_UNIT = math.pi / 8.0
+    DEFAULT_ROTATION_UNIT = math.pi / 4.0
 
     ST_IDLE = 0
     ST_MOVE_STRAIGHT = 1
+    ST_MOVE_ROTATE_RIGHT = 2
     ST_STOP = -1
+    # 同一座標かを判定する範囲Δ
+    EPS = 0.05
 
     def __init__(self):
         self.state = self.ST_IDLE
@@ -166,6 +169,10 @@ class BugRobot:
         self.pos = (self.start[0], self.start[1])
         self.theta = 0
         self.trajectory = [self.pose(), ]
+        # 回転を開始した座標のインデックスを保存する変数
+        self.rotation_start_index = 0
+        self.rotation_end_index = 0
+
 
     def collision_detection(self, next_pos):
         for o in self.world.obstacles:
@@ -187,6 +194,13 @@ class BugRobot:
         """
         thetaの方向を向く
         """
+        if theta > math.pi * 2:
+            theta -= 2 * math.pi
+        elif theta < 0:
+            theta += 2 * math.pi
+
+        #print(f"rotation {theta}")
+
         self.theta = theta
 
     def calc_theta_to_goal(self):
@@ -196,7 +210,7 @@ class BugRobot:
         theta = math.atan2(y, x)
         return theta
 
-    def calc_next_theta(self):
+    def calc_next_theta(self, inverse = False):
         """
         障害物をよける角度を見つける。
         正面先を調べて場合分け
@@ -210,12 +224,27 @@ class BugRobot:
         else:
             sign = -1
 
+        if inverse:
+            sign = -sign
+
         while True:
             theta = theta + sign * self.DEFAULT_ROTATION_UNIT
             nx, ny = self.next_pos(theta)
             if self.collision_detection((nx, ny)):
                 continue
             return theta
+
+    def calc_next_theta_rotation(self):
+        theta = self.theta
+        theta = theta - math.pi + self.DEFAULT_ROTATION_UNIT
+        while True:
+            nx, ny = self.next_pos(theta)
+            if self.collision_detection((nx, ny)):
+                theta = theta + self.DEFAULT_ROTATION_UNIT
+                continue
+            return theta
+
+
 
     def next_pos(self, theta = None):
         """
@@ -232,6 +261,16 @@ class BugRobot:
         next_y = y + math.sin(theta) * self.speed
         return (next_x, next_y)
 
+    # 軌道が１度通ったことがあるかを判定する関数
+    def is_visited(self, pos):
+        if len(self.trajectory) - self.rotation_start_index < 2:
+            return False
+
+        for p in self.trajectory[self.rotation_start_index:-1]:
+            if math.fabs(p[0] - pos[0]) < self.EPS and math.fabs(p[1] - pos[1]) < self.EPS:
+                return True
+        return False
+
     def run(self):
         """
         軌道のアルゴリズム本体
@@ -241,14 +280,40 @@ class BugRobot:
         self.rotation(theta)
         self.state = self.ST_MOVE_STRAIGHT
 
+        search_count = 0
         while self.state != self.ST_STOP:
-            next_x, next_y = self.next_pos()
-            if self.collision_detection((next_x, next_y)):
-                self.state = self.ST_STOP
-                continue
+            if self.state == self.ST_MOVE_STRAIGHT:
+                next_x, next_y = self.next_pos()
+                if self.collision_detection((next_x, next_y)):
+                    theta = self.calc_next_theta()
+                    self.rotation(theta)
+                    self.state = self.ST_MOVE_ROTATE_RIGHT
+                    self.rotation_start_index = len(self.trajectory)
+                    next_x, next_y = self.next_pos()
+            elif self.state == self.ST_MOVE_ROTATE_RIGHT:
+                if self.is_visited(self.pose()):
+                    print("visited")
+
+                    # ゴールに一番近い場所を探す
+                    
+                    # そこに移動する。
+
+                    # ゴールまでの向きを計算する
+
+                    # そこに向かって移動する。
+
+                    self.state = self.ST_MOVE_STRAIGHT
+                    continue
+                theta = self.calc_next_theta_rotation()
+                self.rotation(theta)
+                next_x, next_y = self.next_pos()
 
             self.move((next_x, next_y))
-
+            search_count += 1
+            if search_count > 1000:
+                print("search count over")
+                self.state = self.ST_STOP
+                break
 
     def save_trajectory(self, filepath):
         image = Image.new('RGB', (self.world.IMAGE_SIZE, self.world.IMAGE_SIZE), color=(255, 255, 255))
