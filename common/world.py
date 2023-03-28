@@ -165,4 +165,17 @@ def world2():
     obst3.set_pos((1.0, -6.0))
     world.add_obstacle(obst3)
 
+    obst4 = Obstacle(1.0, 9.0)
+    obst4.set_pos((8.0, -1.0))
+    world.add_obstacle(obst4)
+
+    obst5 = Obstacle(9.0, 1.0)
+    obst5.set_pos((3.0, 3.0))
+    world.add_obstacle(obst5)
+
+    obst6 = Obstacle(1.0, 5.0)
+    obst6.set_pos((-1.0, 0.0))
+    world.add_obstacle(obst6)
+
+
     return world
