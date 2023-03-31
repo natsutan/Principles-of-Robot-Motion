@@ -11,7 +11,6 @@ class BugRobot2(Robot):
     ST_MOVE_STRAIGHT = 1
     ST_MOVE_ROTATE_RIGHT = 2
     ST_STOP = -1
-    MAX_SEARCH_COUNT = 1000
 
     def __init__(self):
         super().__init__()
@@ -141,7 +140,6 @@ class BugRobot2(Robot):
 
             self.move((next_x, next_y))
             search_count += 1
-            print("search count: {}".format(search_count))
             if search_count > self.MAX_SEARCH_COUNT:
                 print("search count over")
                 self.state = self.ST_STOP

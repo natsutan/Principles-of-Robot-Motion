@@ -11,5 +11,9 @@ def is_crossed_line_segment(start, end, p, e=EPSIRON):
     ve = (end[0] - start[0], end[1] - start[1])
     if math.fabs(math.atan2(vs[1], vs[0]) - math.atan2(ve[1], ve[0])) > e:
         return False
+    # ベクトルの大きさが、vs <= ve
+    if math.sqrt(vs[0] ** 2 + vs[1] ** 2) > math.sqrt(ve[0] ** 2 + ve[1] ** 2):
+        return False
+
     return True
 
